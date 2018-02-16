@@ -1,3 +1,4 @@
+import coppelia.FloatW;
 import coppelia.FloatWA;
 import coppelia.IntW;
 import coppelia.IntWA;
@@ -17,13 +18,15 @@ public class LoadEnvironment {
 	protected int clientID;
 	protected final String GROUP_NAME = "environment";
 	protected final String SCENE_OBJECT_NAME = "Sphere";
-	protected String fileToImportPathAndFileName = "/home/enataf/Documents/VREP/pidr18/m2.obj";
+	protected String fileToImportPathAndFileName = "/tmp/map.obj";
+	//protected String fileToImportPathAndFileName = "/home/galtier/VREP/Environments/envSimple.obj";
+	//protected String fileToImportPathAndFileName = "/home/galtier/VREP/Environments/placeStan.obj";
 
 	LoadEnvironment() {
-		
+
 		// Remote connection
 		// ===================================================================================
-		
+
 		// Make sure to have the server side running in V-REP: 
 		// in a child script of a V-REP scene, add following command
 		// to be executed just once, at simulation start:
@@ -66,12 +69,12 @@ public class LoadEnvironment {
 				end
 			 */
 			IntW handle_groupe = new IntW(0);
-			int codeRetour = vrep.simxGetObjectHandle(clientID, GROUP_NAME, handle_groupe, remoteApi.simx_opmode_blocking);
-			if (codeRetour == remoteApi.simx_return_ok) {
+			int returnCode = vrep.simxGetObjectHandle(clientID, GROUP_NAME, handle_groupe, remoteApi.simx_opmode_blocking);
+			if (returnCode == remoteApi.simx_return_ok) {
 				System.out.println(GROUP_NAME + " already exists, remove it...");
 				vrep.simxAddStatusbarMessage(clientID, "remove existing environment", remoteApi.simx_opmode_oneshot);
-				codeRetour = vrep.simxRemoveObject(clientID, handle_groupe.getValue(), remoteApi.simx_opmode_blocking);
-				System.out.println(returnCodeDescription(codeRetour));
+				returnCode = vrep.simxRemoveObject(clientID, handle_groupe.getValue(), remoteApi.simx_opmode_blocking);
+				System.out.println(returnCodeDescription(returnCode));
 			}
 
 			// Load environment from .obj file
@@ -79,7 +82,7 @@ public class LoadEnvironment {
 			/* ORIGINAL LUA CODE:
 			simAddStatusbarMessage("load environment from file...")
 			vertices,indices,reserved,names=simImportMesh(0,"/tmp/envSimple.obj",0,0.0001,1)
-			
+
 			if (vertices) then
 				local tableShapes = {}
 				for i=1,#vertices,1 do
@@ -94,40 +97,58 @@ public class LoadEnvironment {
 			simAddStatusbarMessage("Done!")
 			 */
 			vrep.simxAddStatusbarMessage(clientID, "load environment from file...", remoteApi.simx_opmode_oneshot);
-			ImportMeshResult imr = importMesh(0, fileToImportPathAndFileName, 0, 0.0001f, 1);
+			ImportMeshResult imr = importMesh(0, fileToImportPathAndFileName, 0, 0.0001f, 1f);
 			int numberOfShapes = imr.vertices.length;
 			int[] handles = new int[numberOfShapes]; // groups all shapes to make it easier to remove them all 
 			for (int i=0; i<numberOfShapes; i++) {
 				System.out.println("create shape " + i);
-				System.out.println("vertice " + imr.vertices[i][0] + " " +  imr.vertices[i][1] + " " +imr.indices[i].length);
 				int handle = createMeshShape(2, (float) (20f*Math.PI/180),imr.vertices[i], imr.indices[i]);
-				//int handle = createMeshShape(2, (float) (0.25),imr.vertices[i], imr.indices[i]);
 				//setObjectName(handle, imr.names[i]);
-				vrep.simxSetObjectIntParameter(clientID, handle, vrep.sim_shapeintparam_respondable, 1, remoteApi.simx_opmode_blocking);
+				vrep.simxSetObjectIntParameter(clientID, handle, remoteApi.sim_shapeintparam_respondable, 1, remoteApi.simx_opmode_blocking);
 				handles[i] = handle;
 			}
 			int groupHandle = groupShapes(handles);
 			setObjectName(groupHandle, GROUP_NAME);
-			
-			
+
+
+			// Rotate mesh
+			// =====================================================================================
+			FloatWA eulerAngles = new FloatWA(3);
+			eulerAngles.getArray()[0] = (float)Math.PI/2;
+			eulerAngles.getArray()[1] = 0f;
+			eulerAngles.getArray()[2] = -1*(float)Math.PI/2;
+			vrep.simxSetObjectOrientation(clientID, groupHandle, -1, eulerAngles, remoteApi.simx_opmode_blocking);
+
+
+			// align bottom -> hardcoded value TO BE SOLVED
+			FloatW objbbox_min_z = new FloatW(0f);
+			vrep.simxGetObjectFloatParameter(clientID, groupHandle, remoteApi.sim_objfloatparam_objbbox_min_z, objbbox_min_z, remoteApi.simx_opmode_blocking);
+			System.out.println("min = " + objbbox_min_z.getValue());
+
+			FloatWA position = new FloatWA(3);
+			position.getArray()[0] = 0;
+			position.getArray()[1] = 0;
+			position.getArray()[2] = 3.6f; //-1*objbbox_min_z.getValue();
+			vrep.simxSetObjectPosition(clientID, groupHandle, -1, position, remoteApi.simx_opmode_blocking);
+
 			// End of demo
 			// ======================================================================================
 			try {
-				Thread.sleep(25*1000);
+				Thread.sleep(2*1000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 
 			System.out.println("Approching the end...");
-			
+
 			// Now send some data to V-REP in a non-blocking fashion:
 			vrep.simxAddStatusbarMessage(clientID, "Bye bye V-REP!", remoteApi.simx_opmode_oneshot);
-			
+
 			// Before closing the connection to V-REP, make sure that the last command sent
 			// out had time to arrive. You can guarantee this with (for example):
 			IntW pingTime = new IntW(0);
 			vrep.simxGetPingTime(clientID, pingTime);
-			
+
 			// Now close the connection to V-REP:
 			vrep.simxFinish(clientID);
 		} else
@@ -137,7 +158,7 @@ public class LoadEnvironment {
 
 
 
-	
+
 	/**
 	 * Remote call to simImportMesh function: Imports a mesh from a file
 	 * 
@@ -148,19 +169,19 @@ public class LoadEnvironment {
 	 * @param scalingFactor the scaling factor to apply to the imported vertices
 	 * @return a 3-uplet of vertices (a table to vertice tables), indices (a table to indice tables), names (a table to mesh names extracted from the file)	 * 
 	 */
-	public ImportMeshResult importMesh(int fileFormat, String pathAndFileName, int options, float identicalVerticeTolerance, int scalingFactor) {
+	public ImportMeshResult importMesh(int fileFormat, String pathAndFileName, int options, float identicalVerticeTolerance, float scalingFactor) {
 		/*
 		 * ASSOCIATED LUA CODE:
-	
+
 		importMesh_function=function(inInts,inFloats,inStrings,inBuffer)
 		    fileFormat = inInts[1]
-		    options = inInts[2] 
-			scalingFactor = inInts[3]
 		    pathAndFilename = inStrings[1]
+		    options = inInts[2] 
 		    identicalVerticeTolerance = inFloats[1]
-		
+		    scalingFactor = inFloats[2]
+
 		    vertices,indices,reserved,names=simImportMesh(fileFormat,pathAndFilename,options,identicalVerticeTolerance,scalingFactor)
-		
+
 		    local tabInts = {}
 		    tabInts[1] = table.getn(vertices) -- verticesSizes
 		    tabInts[2] = table.getn(indices)  -- indicesSizes
@@ -173,7 +194,7 @@ public class LoadEnvironment {
 		            indexTabInts = indexTabInts + 1
 		        end
 		    end
-		
+
 		    local tabFloats = {}
 		    local indexTabFloats = 1
 		    for i=1,table.getn(vertices),1 do
@@ -184,30 +205,30 @@ public class LoadEnvironment {
 		            indexTabFloats = indexTabFloats + 1
 		        end
 		    end
-		
+
 		    return tabInts,tabFloats,names,''
 		end
-		*/
-		FloatWA inFloats=new FloatWA(1);
+		 */
+		FloatWA inFloats=new FloatWA(2);
 		inFloats.getArray()[0] = identicalVerticeTolerance;
+		inFloats.getArray()[1] = scalingFactor;
 
 		StringWA inStrings=new StringWA(1);
 		inStrings.getArray()[0] = pathAndFileName; 
 
-		IntWA inInts=new IntWA(3);
+		IntWA inInts=new IntWA(2);
 		inInts.getArray()[0] = fileFormat;
 		inInts.getArray()[1] = options; 
-		inInts.getArray()[2] = scalingFactor; 
 
 		FloatWA outFloats=new FloatWA(2); // simFloat*** vertices: an array to vertice arrays
-										  // simFloat*** reserved: reserved for future extensions. Keep at NULL.
+		// simFloat*** reserved: reserved for future extensions. Keep at NULL.
 		IntWA outInts= new IntWA(3); // simInt** verticesSizes: an array indicating the individual vertice array sizes
-									 // simInt*** indices: an array to indice arrays
-									 // simInt** indicesSizes: an array indicating the individual indice array sizes
+		// simInt*** indices: an array to indice arrays
+		// simInt** indicesSizes: an array indicating the individual indice array sizes
 		StringWA outStrings=new StringWA(1); // simChar*** names: an array to mesh names extracted from the file
-			
-		int result=vrep.simxCallScriptFunction(clientID,SCENE_OBJECT_NAME,vrep.sim_scripttype_childscript, "importMesh_function",inInts,inFloats,inStrings,null,outInts,outFloats,outStrings,null,vrep.simx_opmode_blocking);
-		if (result==vrep.simx_return_ok) {
+
+		int result=vrep.simxCallScriptFunction(clientID,SCENE_OBJECT_NAME,remoteApi.sim_scripttype_childscript, "importMesh_function",inInts,inFloats,inStrings,null,outInts,outFloats,outStrings,null,remoteApi.simx_opmode_blocking);
+		if (result==remoteApi.simx_return_ok) {
 			int verticesSizes = outInts.getArray()[0];
 			int indicesSizes = outInts.getArray()[1];
 			int[][] indices = new int[indicesSizes][];
@@ -242,7 +263,7 @@ public class LoadEnvironment {
 			String[] names = outStrings.getArray();
 			System.out.println("Remove function call to simImportMesh succeed");
 			return (new ImportMeshResult(indices, vertices, names));
-			
+
 		} else {
 			System.out.println("Remote function call to simImportMesh failed : " + returnCodeDescription(result));
 			return null;
@@ -262,7 +283,7 @@ public class LoadEnvironment {
 	protected int createMeshShape(int options, float shadingAngle, float[] vertices, int[] indices) {
 		/*
 		 * ASSOCIATED LUA CODE:
-	
+
 		createMeshShape_function=function(inInts,inFloats,inStrings,inBuffer)
 		    options = inInts[1]
 		    shadingAngle = inFloats[1]
@@ -277,7 +298,7 @@ public class LoadEnvironment {
 		    handle=simCreateMeshShape(options,shadingAngle,vertices,indices)
 		    return {handle},{},{},''
 		end
-		*/
+		 */
 		FloatWA inFloats=new FloatWA(1+vertices.length);
 		inFloats.getArray()[0] = shadingAngle;
 		for (int i=0; i<vertices.length; i++)
@@ -289,10 +310,10 @@ public class LoadEnvironment {
 			inInts.getArray()[i+1]=indices[i];
 
 		IntWA outInts= new IntWA(1);
-		
-		int result=vrep.simxCallScriptFunction(clientID,SCENE_OBJECT_NAME,vrep.sim_scripttype_childscript, "createMeshShape_function",inInts,inFloats,null,null,outInts,null,null,null,vrep.simx_opmode_blocking);
-		if (result==vrep.simx_return_ok) {
-			System.out.println("Remove function call to simCreatetMeshShape succeed");
+
+		int result=vrep.simxCallScriptFunction(clientID,SCENE_OBJECT_NAME,remoteApi.sim_scripttype_childscript, "createMeshShape_function",inInts,inFloats,null,null,outInts,null,null,null,remoteApi.simx_opmode_blocking);
+		if (result==remoteApi.simx_return_ok) {
+			System.out.println("Remote function call to simCreatetMeshShape succeed");
 			int handle = outInts.getArray()[0];
 			return handle;
 		} else {
@@ -301,7 +322,7 @@ public class LoadEnvironment {
 		}
 	}
 
-	
+
 	/**
 	 * Remote call to simGroupShapes function: Groups (or merges) several shapes into a compound shape (or simple shape)
 	 * 
@@ -311,22 +332,22 @@ public class LoadEnvironment {
 	private int groupShapes(int[] shapeHandles) {
 		/*
 		 * ASSOCIATED LUA CODE:
-		
+
 		groupShapes_function=function(inInts,inFloats,inStrings,inBuffer)
 		    shapeHandles = inInts
 		    handle=simGroupShapes(shapeHandles)
 		    return {handle},{},{},''
 		end	
-		*/
+		 */
 		IntWA inInts=new IntWA(shapeHandles.length);
 		for (int i=0; i<shapeHandles.length; i++)
 			inInts.getArray()[i]=shapeHandles[i];
-		
+
 		IntWA outInts= new IntWA(1);
 
-		int result=vrep.simxCallScriptFunction(clientID,SCENE_OBJECT_NAME,vrep.sim_scripttype_childscript, "groupShapes_function",inInts,null,null,null,outInts,null,null,null,vrep.simx_opmode_blocking);
-		if (result==vrep.simx_return_ok) {
-			System.out.println("Remove function call to simGroupShapes succeed");
+		int result=vrep.simxCallScriptFunction(clientID,SCENE_OBJECT_NAME,remoteApi.sim_scripttype_childscript, "groupShapes_function",inInts,null,null,null,outInts,null,null,null,remoteApi.simx_opmode_blocking);
+		if (result==remoteApi.simx_return_ok) {
+			System.out.println("Remote function call to simGroupShapes succeed");
 			int handle = outInts.getArray()[0];
 			return handle;
 		} else {
@@ -334,9 +355,9 @@ public class LoadEnvironment {
 			return -1;
 		}	
 	}
-	
-	
-	
+
+
+
 	/**
 	 * Remote call to simSetObjectName function: Sets the name of an object based on its handle.
 	 * 
@@ -347,7 +368,7 @@ public class LoadEnvironment {
 	private int setObjectName(int objectHandle, String objectName) {
 		/*
 		 * ASSOCIATED LUA CODE:
-		
+
 		setObjectName_function=function(inInts,inFloats,inStrings,inBuffer)
 		    objectHandle = inInts[1]
 		    objectName = inStrings[1]
@@ -357,25 +378,221 @@ public class LoadEnvironment {
 		 */
 		IntWA inInts = new IntWA(1);
 		inInts.getArray()[0] = objectHandle;
-		
+
 		StringWA inStrings = new StringWA(1);
 		inStrings.getArray()[0] = objectName;
-		
+
 		IntWA outInts= new IntWA(1);
-		
-		int result=vrep.simxCallScriptFunction(clientID,SCENE_OBJECT_NAME,vrep.sim_scripttype_childscript, "setObjectName_function",inInts,null,inStrings,null,outInts,null,null,null,vrep.simx_opmode_blocking);
-		if (result==vrep.simx_return_ok) {
-			System.out.println("Remove function call to simSetObjectName succeed");
+
+		int result=vrep.simxCallScriptFunction(clientID,SCENE_OBJECT_NAME,remoteApi.sim_scripttype_childscript, "setObjectName_function",inInts,null,inStrings,null,outInts,null,null,null,remoteApi.simx_opmode_blocking);
+		if (result==remoteApi.simx_return_ok) {
+			System.out.println("Remote function call to simSetObjectName succeed");
 			int returnValue = outInts.getArray()[0];
 			return returnValue;
 		} else {
 			System.out.println("Remote function call to simSetObjectName failed : " + returnCodeDescription(result));
 			return -1;
 		}	
-		
+
 	}
 
-	
+
+
+	/**
+	 * Remote call to simGetObjectMatrix function: Retrieves the transformation matrix of an object.
+	 * 
+	 * @param objectHandle handle of the object
+	 * @param relativeToObjectHandle indicates relative to which reference frame we want the matrix. Specify -1 to retrieve the absolute transformation matrix, sim.handle_parent to retrieve the transformation matrix relative to the object's parent, or an object handle relative to whose reference frame we want the transformation matrix.
+	 * @return table of 12 numbers (the last row of the 4x4 matrix (0,0,0,1) is not returned), or nil in case of an error.
+	 */
+	private float[] getObjectMatrix(int objectHandle, int relativeToObjectHandle) {
+		/*
+		 * ASSOCIATED LUA CODE:
+
+		getObjectMatrix_function=function(inInts,inFloats,inStrings,inBuffer)
+		    objectHandle = inInts[1]
+		    relativeToObjectHandle = inInts[2]
+		    matrix=simgetObjectMatrix(objectHandle,relativeToObjectHandle)
+		    return {},matrix,{},''
+		end
+		 */
+		IntWA inInts = new IntWA(2);
+		inInts.getArray()[0] = objectHandle;
+		inInts.getArray()[1] = relativeToObjectHandle;
+
+		FloatWA outFloats = new FloatWA(12);
+
+		int result=vrep.simxCallScriptFunction(clientID, SCENE_OBJECT_NAME, remoteApi.sim_scripttype_childscript, "getObjectMatrix_function", inInts, null, null, null, null, outFloats, null, null, remoteApi.simx_opmode_blocking);
+		if (result==remoteApi.simx_return_ok) {
+			System.out.println("Remote function call to simGetObjectMatrix succeed");
+			return outFloats.getArray();
+		} else {
+			System.out.println("Remote function call to simGetObjectMatrix failed : " + returnCodeDescription(result));
+			return null;
+		}	
+	}
+
+	/**
+	 * Remote call to simSetObjectMatrix function: Sets the transformation matrix of an object. Dynamically simulated objects will implicitely be reset before the command is applied (i.e. similar to calling sim.resetDynamicObject just before).
+	 * 
+	 * @param objectHandle handle of the object
+	 * @param relativeToObjectHandle indicates relative to which reference frame the matrix is specified. Specify -1 to set the absolute transformation matrix, sim_handle_parent to set the transformation matrix relative to the object's parent, or an object handle relative to whose reference frame the transformation matrix is specified.
+	 * @param matrix pointer to 12 simFloat values (the last row of the 4x4 matrix (0,0,0,1) is not needed)
+The x-axis of the orientation component is (matrix[0],matrix[4],matrix[8])
+The y-axis of the orientation component is (matrix[1],matrix[5],matrix[9])
+The z-axis of the orientation component is (matrix[2],matrix[6],matrix[10])
+The translation component is (matrix[3],matrix[7],matrix[11])
+	 * @return -1 if operation was not successful. In a future release, a more differentiated return value might be available
+	 */
+	private int setObjectMatrix(int objectHandle, int relativeToObjectHandle, float[] matrix) {
+		IntWA inInts = new IntWA(2);
+		inInts.getArray()[0] = objectHandle;
+		inInts.getArray()[1] = relativeToObjectHandle;
+		FloatWA inFloats = new FloatWA(12);
+		for (int i=0; i<12; i++) {
+			inFloats.getArray()[i] = matrix[i];
+		}
+
+		IntWA outInts= new IntWA(1);
+
+		int result=vrep.simxCallScriptFunction(clientID, SCENE_OBJECT_NAME, remoteApi.sim_scripttype_childscript, "setObjectMatrix_function", inInts, inFloats, null, null, outInts, null, null, null, remoteApi.simx_opmode_blocking);
+		if (result==remoteApi.simx_return_ok) {
+			System.out.println("Remove function call to simSetObjectMatrix succeed");
+			return outInts.getArray()[0];
+		} else {
+			System.out.println("Remote function call to simSetObjectMatrix failed : " + returnCodeDescription(result));
+			return -1;
+		}	
+
+	}
+
+
+	/**
+	 * Remote call to simMultiplyVector function: Multiplies a vector with a transformation matrix (v=m*v).
+	 * 
+	 * @param matrix the transformation matrix (a table containing 12 values (the last row (0,0,0,1) is not required))
+	 * @param vector the original vector (a table containing 3 values (the last element (1) of the homogeneous coordinates is not required)
+	 * @return the result vector (a table containing 3 values (the last element (1) of the homogeneous coordinates is omitted))
+	 */
+	private float[] multiplyVector(float[] matrix, float[] vector) {
+		/*
+		 * ASSOCIATED LUA CODE:
+
+		multiplyVector_function=function(inInts,inFloats,inStrings,inBuffer)
+		    matrix = {inFloats[1], inFloats[2], inFloats[3], inFloats[4], inFloats[5], inFloats[6], inFloats[7], inFloats[8], inFloats[9], inFloats[10], inFloats[11], inFloats[12]}
+		    vector = {inFloats[13], inFloats[14], inFloats[15]}
+		    resultVector = simMultiplyVector(matrix, vector)
+		    return {},resultVector,{},''
+		end
+		 */
+		FloatWA inFloats = new FloatWA(12+3);
+		for (int i=0; i<12; i++) {
+			inFloats.getArray()[i] = matrix[i];
+		}
+		for (int i=0; i<3; i++) {
+			inFloats.getArray()[12+i] = vector[i];
+		}
+
+		FloatWA outFloats = new FloatWA(3);
+
+		int result=vrep.simxCallScriptFunction(clientID, SCENE_OBJECT_NAME, remoteApi.sim_scripttype_childscript, "multiplyVector_function", null, inFloats, null, null, null, outFloats, null, null, remoteApi.simx_opmode_blocking);
+		if (result==remoteApi.simx_return_ok) {
+			System.out.println("Remote function call to multiplyVector succeed");
+			return outFloats.getArray();
+		} else {
+			System.out.println("Remote function call to multiplyVector failed : " + returnCodeDescription(result));
+			return null;
+		}	
+	}
+
+	/**
+	 * Remote call to simMultiplyMatrices function: Multiplies two transformation matrices.
+	 * 
+	 * @param matrix1 the first input matrix
+	 * @param matrix2 the second input matrix
+	 * @return the output matrix (the result of the multiplication: matrixIn1*matrixIn2).
+A transformation matrix contains 12 values (the last row (0,0,0,1) is omitted):
+The x-axis of the orientation component is (matrix[0],matrix[4],matrix[8])
+The y-axis of the orientation component is (matrix[1],matrix[5],matrix[9])
+The z-axis of the orientation component is (matrix[2],matrix[6],matrix[10])
+The position component is (matrix[3],matrix[7],matrix[11])
+	 */
+	private float[] multiplyMatrices(float[] matrix1, float[] matrix2) {
+		/*
+		 * ASSOCIATED LUA CODE:
+
+		multiplyMatrices_function=function(inInts,inFloats,inStrings,inBuffer)
+		    matrix1 = {inFloats[1], inFloats[2], inFloats[3], inFloats[4], inFloats[5], inFloats[6], inFloats[7], inFloats[8], inFloats[9], inFloats[10], inFloats[11], inFloats[12]}
+		    matrix2 = {inFloats[13], inFloats[14], inFloats[15], inFloats[16], inFloats[17], inFloats[18], inFloats[19], inFloats[20], inFloats[21], inFloats[22], inFloats[23], inFloats[24]}
+		    resultMatrix = simMultiplyMatrices(matrix1, matrix2)
+		    return {},resultMatrix,{},''
+		end
+		 */
+		FloatWA inFloats = new FloatWA(12+12);
+		for (int i=0; i<12; i++) {
+			inFloats.getArray()[i] = matrix1[i];
+		}
+		for (int i=0; i<12; i++) {
+			inFloats.getArray()[12+i] = matrix2[i];
+		}
+
+		FloatWA outFloats = new FloatWA(12);
+
+		int result=vrep.simxCallScriptFunction(clientID, SCENE_OBJECT_NAME, remoteApi.sim_scripttype_childscript, "multiplyMatrices_function", null, inFloats, null, null, null, outFloats, null, null, remoteApi.simx_opmode_blocking);
+		if (result==remoteApi.simx_return_ok) {
+			System.out.println("Remote function call to multiplyMatrices succeed");
+			return outFloats.getArray();
+		} else {
+			System.out.println("Remote function call to multiplyMatrices failed : " + returnCodeDescription(result));
+			return null;
+		}	
+	}
+
+
+
+	/**
+	 * Remote call to simBuildMatrix function: Builds a transformation matrix based on a position vector and Euler angles.
+	 * 
+	 * @param position pointer to 3 simFloat values representing the position component
+	 * @param eulerAngles pointer to 3 simFloat values representing the angular component
+	 * @return table containing the transformation matrix (except for the last row), or nil in case of an error. Table values in Lua are indexed from 1, not 0!
+	 */
+	private float[] buildMatrix(float[] position, float[] eulerAngles) {
+		/*
+		 * ASSOCIATED LUA CODE:
+
+		buildMatrix_function==function(inInts,inFloats,inStrings,inBuffer)
+		    position = {intFloats[1], inFloats[2], inFloats[3]}
+		    eulerAngles = {intFloats[4], inFloats[5], inFloats[6]}
+		    resultMatrix = simBuildMatrix(position, eulerAngles)
+		    return {},resultMatrix,{},''
+		end
+		 */
+		FloatWA inFloats = new FloatWA(3+3);
+		for (int i=0; i<3; i++) {
+			inFloats.getArray()[i] = position[i];
+			System.out.println("position["+i+"] = " + inFloats.getArray()[i]);
+		}
+		for (int i=0; i<3; i++) {
+			inFloats.getArray()[3+i] = eulerAngles[i];
+			System.out.println("eulerAngles["+i+"] = " + inFloats.getArray()[3+i]);
+		}
+
+
+		FloatWA outFloats = new FloatWA(12);
+
+		int result=vrep.simxCallScriptFunction(clientID, SCENE_OBJECT_NAME, remoteApi.sim_scripttype_childscript, "buildMatrix_function", null, inFloats, null, null, null, outFloats, null, null, remoteApi.simx_opmode_blocking);
+		if (result==remoteApi.simx_return_ok) {
+			System.out.println("Remote function call to buildMatrix succeed");
+			return outFloats.getArray();
+		} else {
+			System.out.println("Remote function call to buildMatrix failed : " + returnCodeDescription(result));
+			return null;
+		}		
+	}
+
+
+
 	/**
 	 * Remote API function return codes
 	 * 
@@ -410,8 +627,8 @@ public class LoadEnvironment {
 		}
 
 	}
-	
-	
+
+
 	/**
 	 * result of the call to simImportMeshResult
 	 */
