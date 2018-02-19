@@ -17,11 +17,11 @@ public class LoadEnvironment {
 	protected remoteApi vrep;
 	protected int clientID;
 	protected final String GROUP_NAME = "environment";
-	protected final String SCENE_OBJECT_NAME = "Sphere";
+	protected final String SCENE_OBJECT_NAME = "Dummy";
 	protected String fileToImportPathAndFileName = "/tmp/map.obj";
 	//protected String fileToImportPathAndFileName = "/home/galtier/VREP/Environments/envSimple.obj";
 	//protected String fileToImportPathAndFileName = "/home/galtier/VREP/Environments/placeStan.obj";
-
+	
 	LoadEnvironment() {
 
 		// Remote connection
@@ -120,15 +120,15 @@ public class LoadEnvironment {
 			vrep.simxSetObjectOrientation(clientID, groupHandle, -1, eulerAngles, remoteApi.simx_opmode_blocking);
 
 
-			// align bottom -> hardcoded value TO BE SOLVED
-			FloatW objbbox_min_z = new FloatW(0f);
-			vrep.simxGetObjectFloatParameter(clientID, groupHandle, remoteApi.sim_objfloatparam_objbbox_min_z, objbbox_min_z, remoteApi.simx_opmode_blocking);
-			System.out.println("min = " + objbbox_min_z.getValue());
+			// align bottom
+			// /!\ after rotation z<->x
+			FloatW objbbox_min_x = new FloatW(0f);
+			vrep.simxGetObjectFloatParameter(clientID, groupHandle, remoteApi.sim_objfloatparam_objbbox_min_x, objbbox_min_x, remoteApi.simx_opmode_blocking);
 
 			FloatWA position = new FloatWA(3);
 			position.getArray()[0] = 0;
 			position.getArray()[1] = 0;
-			position.getArray()[2] = 3.6f; //-1*objbbox_min_z.getValue();
+			position.getArray()[2] = -1*objbbox_min_x.getValue();
 			vrep.simxSetObjectPosition(clientID, groupHandle, -1, position, remoteApi.simx_opmode_blocking);
 
 			// End of demo
