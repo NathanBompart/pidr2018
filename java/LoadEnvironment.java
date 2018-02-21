@@ -4,6 +4,7 @@ import coppelia.IntW;
 import coppelia.IntWA;
 import coppelia.StringWA;
 import coppelia.remoteApi;
+//import BubbleRob;
 
 /**
  * @author Virginie Galtier
@@ -18,7 +19,9 @@ public class LoadEnvironment {
 	protected int clientID;
 	protected final String GROUP_NAME = "environment";
 	protected final String SCENE_OBJECT_NAME = "Dummy";
-	protected String fileToImportPathAndFileName = "/tmp/map.obj";
+	protected final String BUBBLEROB = "bubbleRob";
+	protected String fileToImportPathAndFileName = "/tmp/placeStan.obj";
+	protected BubbleRob bubble;
 	//protected String fileToImportPathAndFileName = "/home/galtier/VREP/Environments/envSimple.obj";
 	//protected String fileToImportPathAndFileName = "/home/galtier/VREP/Environments/placeStan.obj";
 	
@@ -77,6 +80,16 @@ public class LoadEnvironment {
 				System.out.println(returnCodeDescription(returnCode));
 			}
 
+			IntW handle_bubbleRob = new IntW(0);
+			returnCode = vrep.simxGetObjectHandle(clientID, BUBBLEROB, handle_bubbleRob, remoteApi.simx_opmode_blocking);
+			if (returnCode != remoteApi.simx_return_ok) {
+				System.out.println(BUBBLEROB + " doesn't exists, add it...");
+				System.out.println(returnCodeDescription(returnCode));
+			}
+
+			bubble = new BubbleRob(vrep,clientID,handle_bubbleRob);
+
+
 			// Load environment from .obj file
 			// ===================================================================================
 			/* ORIGINAL LUA CODE:
@@ -131,6 +144,15 @@ public class LoadEnvironment {
 			position.getArray()[2] = -1*objbbox_min_x.getValue();
 			vrep.simxSetObjectPosition(clientID, groupHandle, -1, position, remoteApi.simx_opmode_blocking);
 
+			vrep.simxGetObjectPosition(clientID,groupHandle,-1,position,remoteApi.simx_opmode_blocking);
+			position.getArray()[0] = (float)3.2535e2;
+			position.getArray()[1] = (float)-1.4142e3;
+			returnCode = vrep.simxSetObjectPosition(clientID,groupHandle,-1,position,remoteApi.simx_opmode_blocking);
+
+			if(returnCode != remoteApi.simx_return_ok){
+				System.out.println("erreur translation");
+			}
+
 			// End of demo
 			// ======================================================================================
 			try {
@@ -139,6 +161,7 @@ public class LoadEnvironment {
 				e.printStackTrace();
 			}
 
+			bubble.setVelocity(50f);
 			System.out.println("Approching the end...");
 
 			// Now send some data to V-REP in a non-blocking fashion:
@@ -393,6 +416,7 @@ public class LoadEnvironment {
 			System.out.println("Remote function call to simSetObjectName failed : " + returnCodeDescription(result));
 			return -1;
 		}	
+
 
 	}
 
