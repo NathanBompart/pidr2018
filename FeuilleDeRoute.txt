@@ -30,6 +30,8 @@ Mecredi 21 Mars:
 
 Les différents types d'asservissements ont été testé (position, vitesse), mais la difficulté de la tâche étant trop importante, nous avons changé de position quant à la boule cible. En effet, si l'on dirige cet objet (ce qui est chose aisé puisque ses coordonnées dans l'espace sont fixes) au lieu du drône, nous pouvons en incrémentant de façon constante ses coordonnées spatiales donner une vitesse constante au drône. Nous dirigeons donc le drône avec une latence spatiale assez peu importante. Nous avons donc fait des tests et cette méthode fonctionne bien. La boule possédant des coordonnées absolues, l'asservissement en position est déjà présent. Ceci à l'avantage de ne pas toucher aux fonctions directrices du moteur. L'objectif de la prochaine scéance est d'implanter un algorithme de contournement d'espace, et pourquoi pas plus tard d'ajouter la direction manuelle par java.
 
+Jeudi 29 Mars:
 
+Nous avons essayé d'ajouter un Proximity Sensor au drône pour pouvoir détecter les obstacles mais nous n'avons pas réussi à utiliser cet outil. Nous essaierons donc de régler le problème avant notre prochaine scéance de travail pour essayer de ne pas perdre de temps.
 
 
