@@ -34,7 +34,21 @@ public class SceneQuadri {
                 System.out.format("simxGetObjects call returned with error code: " + codeRetourDescription(codeRetour));
             QuadriCoptere helip = new QuadriCoptere(vrep,clientID,"Quadricopter");
             //helip.forward();
-            helip.rotate();
+            helip.rotate(1);
+            try {
+                Thread.sleep(3*1000);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            helip.rotate(-1);
+            try {
+                Thread.sleep(3*1000);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            helip.stopRotate();
         }
     }
 

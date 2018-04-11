@@ -41,6 +41,14 @@ public class QuadriCoptere {
         forward(ford);
     }
 
+    public void stopForward(){
+        FloatWA ford =new FloatWA(3);
+        ford.getArray()[0] = 0;
+        ford.getArray()[1] = 0;
+        ford.getArray()[2] = 0;
+        forward(ford);
+    }
+
     private void forward(FloatWA forwardValue){
         int result=vrep.simxCallScriptFunction(clientID,nom,vrep.sim_scripttype_childscript, "modif_sp",null,forwardValue,null,null,null,null,null,null,vrep.simx_opmode_blocking);
         if (result!=vrep.simx_return_ok) {
@@ -48,11 +56,20 @@ public class QuadriCoptere {
         }
     }
 
-    public void rotate(){
+    public void rotate(int i){
+        assert i==1 || i==-1;
         FloatWA ford =new FloatWA(3);
         ford.getArray()[0] = 0;
         ford.getArray()[1] = 0;
-        ford.getArray()[2] = (float)3.14/4;
+        ford.getArray()[2] = i*(float)3.14/4;
+        rotate(ford);
+    }
+
+    public void stopRotate(){
+        FloatWA ford =new FloatWA(3);
+        ford.getArray()[0] = 0;
+        ford.getArray()[1] = 0;
+        ford.getArray()[2] = 0;
         rotate(ford);
     }
 
