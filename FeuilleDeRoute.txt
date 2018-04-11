@@ -1,0 +1,37 @@
+Mercredi 07/02/2018
+
+Réunion avec M. Emmanuel Nataf:
+
+Lors de la réunion de présentation, des pistes de  travail ont été fournis. L’objectif actuel que nous avons est de comprendre l’utilisation de java avec le logiciel Vrep, notamment à travers le programme java “cubot.java” qui permet de diriger un robot dans Vrep à partir d’un script externe en java. Après avoir suivi les tutoriels de base présents sur le site web de Vrep, nous devrons essayer d’adapter le code de cubot.java à un drone quadrimoteur présent initialement dans Vrep.  
+
+Jeudi 08/02/2018
+
+Travail en groupe
+
+Nous avons réussis à piloter un quadricoptère depuis un programme java extérieur (pour l’instant nous pouvons juste spécifier la destination finale pour le drône). Le programme Quadricoptère.java est disponible sur le drive. 
+
+Mardi 13/02/2018
+
+Réunion d’une heure pour faire une mise au point et discuter des objectifs, à savoir mettre un robot sur la place stan (pour l’instant un bubblerob) et potentiellement pouvoir le piloter.
+
+Virginie -> jeudi 15/02
+J’ai plus l’habitude des dépôts CVS que des Google Drive ; j’ai déposé une mise à jour de LoadEnvironment.java qui “rotate” le mesh importé mais je vois que vous aviez aussi uploadé une autre version mais difficile de voir les modif que vous y avez apportées. Ce n’est pas très pratique. Mais peut-être qu’il a un bouton ou autre à cliquer quelque part pour voir les diff ?
+J’ai aussi déposé ExternalBubbleRob (.java et .ttt) qui vous aideront peut-être pour le pilotage de votre bubblerob sur la place Stan : j’ai simplement pris l’algo de déplacement du bubbleRob qui était dans le script Lua et je l’ai recodé dans le fichier Java.
+
+Mercredi 21 Février:
+Nous sommes allé travailler au Loria et avons configuer la session de travail en installant Vrep et en effectuants les manips nécessaires. Nous avons donc modifié le fichier LoadEnvironment.java pour “créer” un environnement de test pour le robot. Nous avons  translaté la place pour la centrer sur le robot. Par contre nous n’avons pas trouvé ExternalBubbleRob.java dans le dépot git. 
+
+Mercredi 7 Mars:
+
+L'idée avait été soulevé de se passer de la boule cible du quadricoptère implanté nativement dans Vrep pour pouvoir avoir plus de liberté sur le drône, et nous pensions qu'elle pourrait poser problème dans le cas d'une vitesse constante. Nous avons donc travaillé sur cet aspect et le résultat fut peu satisfaisant, le drône ne résiste pas aux perturbations. En effet, étant dirigé vers un point définit dans son référentiel personnel, il n'y avait aucun asservissement en position. Les mouvements devenaient chaotiques et nous avons décidé d'essayer d'asservir le système en position, d'abord avec un correcteur PID, puis comme nous l'a conseillé E.Nataf, avec un GPS.
+
+
+Mecredi 21 Mars:
+
+Les différents types d'asservissements ont été testé (position, vitesse), mais la difficulté de la tâche étant trop importante, nous avons changé de position quant à la boule cible. En effet, si l'on dirige cet objet (ce qui est chose aisé puisque ses coordonnées dans l'espace sont fixes) au lieu du drône, nous pouvons en incrémentant de façon constante ses coordonnées spatiales donner une vitesse constante au drône. Nous dirigeons donc le drône avec une latence spatiale assez peu importante. Nous avons donc fait des tests et cette méthode fonctionne bien. La boule possédant des coordonnées absolues, l'asservissement en position est déjà présent. Ceci à l'avantage de ne pas toucher aux fonctions directrices du moteur. L'objectif de la prochaine scéance est d'implanter un algorithme de contournement d'espace, et pourquoi pas plus tard d'ajouter la direction manuelle par java.
+
+Jeudi 29 Mars:
+
+Nous avons essayé d'ajouter un Proximity Sensor au drône pour pouvoir détecter les obstacles mais nous n'avons pas réussi à utiliser cet outil. Nous essaierons donc de régler le problème avant notre prochaine scéance de travail pour essayer de ne pas perdre de temps.
+
+
