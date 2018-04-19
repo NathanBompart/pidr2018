@@ -34,4 +34,11 @@ Jeudi 29 Mars:
 
 Nous avons essayé d'ajouter un Proximity Sensor au drône pour pouvoir détecter les obstacles mais nous n'avons pas réussi à utiliser cet outil. Nous essaierons donc de régler le problème avant notre prochaine scéance de travail pour essayer de ne pas perdre de temps.
 
+Mercredi 11 Avril:
+Nous avons maitrisé puis remplacé le proximity sensor par un fast3DLaser, et nous avons tenté de communiquer les données perçues à travers un tube au script principal. La documentation du capteur étant floue et très dure à éclaircir par le biais d'internet, nous n'avons pas pu cerner directement le fonctionnement des tubes.
+
+Mercredi 18 avril et Jeudi 19 avril:
+
+Compréhension et application du fonctionnement des tubes. Nous sommes arrivés à récuperer le tableau de triplé renvoyé par le script du capteur 3D dans le script principal et nous avons élaboré sur papier un algorithme simple de comportement de manière à traiter et utiliser le tableau pour en comprendre le fonctionnement. Le principe de l'algorithme est de permettre au drone de rester à une certaine hauteur du sol et de contourner des objets. Pour cela nous nous intéresserons à la partie inférieure du tableau (1/3 arbitrairement) fixant une norme du vecteur distance (puisque nous avons 3 coordonnées) minimale pour la montée (si un objet au sol est proche le drone monte ), et maximale pour la descente (si le drone capte le sol loin, alors il peut descendre). Pour les 2/3 restants du tableau, nous le séparerons en 2 verticalement, de manière à pouvoir détecter la présence d'un obstacle à gauche ou à droite et de réagir en fonction (aller à droite ou à gauche). Nous laissons le cas où l'objet est présent dans les deux cadrants pour plus tard (le drone restera statique dans l'algo). 
+
 
